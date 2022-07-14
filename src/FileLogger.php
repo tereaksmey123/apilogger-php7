@@ -2,10 +2,6 @@
 
 namespace AWT;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\File;
 use AWT\Contracts\ApiLoggerInterface;
 
@@ -31,16 +27,20 @@ class FileLogger extends AbstractLogger implements ApiLoggerInterface
     public function getLogs()
     {
         //check if the directory exists
-        if (File::isDirectory($this->path)) {
+        if (is_dir($this->path)) {
             //scann the directory
-            $files = glob($this->path."/*.*");
+            $files = scandir($this->path);
 
-            $contentCollection = collect();
+            $contentCollection = [];
 
             //loop each files
             foreach ($files as $file) {
-                if (!File::isDirectory($file)) {
-                    $contentCollection->add((object) unserialize(file_get_contents($file)));
+                if (!is_dir($file)) {
+                    $lines = file($this->path.DIRECTORY_SEPARATOR.$file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                    foreach ($lines as $line) {
+                        $contentarr = explode(";", $line);
+                        array_push($contentCollection, $this->mapArrayToModel($contentarr));
+                    }
                 }
             }
             return collect($contentCollection);
@@ -52,21 +52,20 @@ class FileLogger extends AbstractLogger implements ApiLoggerInterface
     /**
      * write logs to file
      *
-     * @param Request                                $request
-     * @param Response|JsonResponse|RedirectResponse $response
-     *
+     * @param [type] $request
+     * @param [type] $response
      * @return void
      */
-    public function saveLogs(Request $request, Response|JsonResponse|RedirectResponse $response)
+    public function saveLogs($request, $response)
     {
         $data = $this->logData($request, $response);
 
         $filename = $this->getLogFilename();
 
-        $contents = serialize($data);
+        $contents = implode(";", $data);
 
-        if(!File::isDirectory($this->path))
-            File::makeDirectory($this->path, 0777, true, true);
+        File::makeDirectory($this->path, 0777, true, true);
+
 
         File::append(($this->path.DIRECTORY_SEPARATOR.$filename), $contents.PHP_EOL);
 
@@ -86,13 +85,6 @@ class FileLogger extends AbstractLogger implements ApiLoggerInterface
         preg_match('/{(.*?)}/', $configFilename, $matches, PREG_OFFSET_CAPTURE);
         if (sizeof($matches) > 0) {
             $filename = str_replace($matches[0][0], date("{$matches[1][0]}"), $configFilename);
-        }
-
-        if(strpos($filename, '[uuid]') !== false) {
-            $filename = str_replace('[uuid]', uniqid(), $filename);
-        } else {
-            $extension = File::extension($filename);
-            $filename = substr($filename, 0, -strlen($extension)).uniqid().".$extension";
         }
         return $filename;
     }
