@@ -2,14 +2,14 @@
 
 namespace AWT\Providers;
 
-use AWT\Console\Commands\ClearApiLogger;
-use AWT\Http\Exceptions\InvalidApiLogDriverException;
-use AWT\Http\Middleware\ApiLogger;
-use AWT\Contracts\ApiLoggerInterface;
+use Exception;
 use AWT\DBLogger;
 use AWT\FileLogger;
-use Exception;
+use AWT\Http\Middleware\ApiLogger;
+use AWT\Contracts\ApiLoggerInterface;
 use Illuminate\Support\ServiceProvider;
+use AWT\Console\Commands\ClearApiLogger;
+use AWT\Exceptions\InvalidApiLogDriverException;
 
 class ApiLogServiceProvider extends ServiceProvider
 {
